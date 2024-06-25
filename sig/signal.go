@@ -1,4 +1,4 @@
-package kill
+package sig
 
 import (
 	"context"
@@ -35,7 +35,7 @@ func (sf *Signal) SignalEnd() *Signal {
 }
 
 // 程序退出
-func (sf *Signal) SignalExit() *Signal {
+func (sf *Signal) SignalAllExit() *Signal {
 	sf.sigs = append(sf.sigs, syscall.SIGTERM, syscall.SIGINT, syscall.SIGKILL)
 	return sf
 }
@@ -60,6 +60,7 @@ func (sf *Signal) WithCancel(ctx context.Context) (context.Context, func()) {
 			signal.Stop(ch)
 		case <-ch:
 			cancel()
+			signal.Stop(ch)
 		}
 	}()
 
