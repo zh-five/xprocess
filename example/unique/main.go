@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"time"
@@ -10,14 +9,15 @@ import (
 )
 
 func main() {
-	isKill := flag.Bool("k", false, "kill old")
-	flag.Parse()
+	// isKill := flag.Bool("k", false, "kill old")
+	// flag.Parse()
 
-	if *isKill {
-		killOld()
-	} else {
-		exitSelf()
-	}
+	// if *isKill {
+	// 	killOld()
+	// } else {
+	// 	exitSelf()
+	// }
+	killOld()
 }
 
 func exitSelf() {

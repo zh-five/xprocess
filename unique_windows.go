@@ -4,7 +4,6 @@
 package xprocess
 
 import (
-	"fmt"
 	"time"
 
 	"golang.org/x/sys/windows"
@@ -16,7 +15,7 @@ func waitForEvent(event windows.Handle, onKill func()) {
 	for {
 		result, err := windows.WaitForSingleObject(event, windows.INFINITE)
 		if err != nil {
-			fmt.Println("Error waiting for event:")
+			println("Error waiting for event:")
 			panic(err)
 		}
 		switch result {
@@ -37,7 +36,7 @@ func uniqueCheckAndKillOld(flag string, onKill func()) {
 	if event != 0 {
 		err := windows.SetEvent(event) // 通知旧进程退出
 		if err != nil {
-			fmt.Println("windows.SetEvent() error")
+			println("windows.SetEvent() error")
 			panic(err)
 		}
 		windows.CloseHandle(event)
@@ -46,7 +45,7 @@ func uniqueCheckAndKillOld(flag string, onKill func()) {
 	// 重新创建事件,用于监听
 	event, err := windows.CreateEvent(nil, 0, 0, name)
 	if event == 0 {
-		fmt.Println("windows.CreateEvent() error")
+		println("windows.CreateEvent() error")
 		panic(err)
 	}
 
@@ -57,7 +56,7 @@ func uniOpenEvent(flag string) (event windows.Handle, name *uint16) {
 	name = windows.StringToUTF16Ptr("xprocess_" + flag)
 	event, err := windows.OpenEvent(windows.EVENT_MODIFY_STATE, false, name)
 	if err != nil {
-		fmt.Println(err)
+		println(err)
 		event = 0
 	}
 
@@ -79,7 +78,7 @@ func uniqueCheck(flag string) (isUniq bool) {
 	// 重新创建事件,用于监听
 	event, err := windows.CreateEvent(nil, 0, 0, name)
 	if event == 0 {
-		fmt.Println("windows.CreateEvent() error")
+		println("windows.CreateEvent() error")
 		panic(err)
 	}
 

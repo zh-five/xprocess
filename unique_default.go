@@ -26,10 +26,11 @@ var uniPidFile = ""
 func uniqueCheckAndKillOld(flag string, onKill func()) {
 	uniqueCheckAndDo(flag, func(proc *os.Process) {
 		err := proc.Signal(syscall.SIGHUP) // 通知旧进程退出
-		fmt.Println("proc.Signal(syscall.SIGHUP):", err)
+		println("发送 SIGHUP 信号到 pid =", proc.Pid, err)
 	})
 
 	go func() {
+		println("开始监听 SIGHUP 信号. pid =", os.Getpid())
 		<-NewSignal(syscall.SIGHUP).Done()
 		onKill()
 	}()
@@ -59,7 +60,11 @@ func uniqueCheckAndDo(flag string, do func(proc *os.Process)) {
 			proc, err := os.FindProcess(pid)
 			if err == nil {
 				do(proc)
+			} else {
+				panic(err)
 			}
+		} else {
+			println(os.Getpid(), "pid 未运行:", pid)
 		}
 	}
 
@@ -88,6 +93,7 @@ func uniSavePid() {
 	if err != nil {
 		panic(err)
 	}
+	println("保存pid:", str, uniPidFile)
 }
 
 // 获取
@@ -101,16 +107,19 @@ var uniGetPidFile = func(flag string) (pidFile string) {
 	if err == nil && uniCheckDirRW(dir) {
 		return
 	}
+	println(os.Getpid(), "UserCacheDir", err)
 
 	dir, err = os.UserConfigDir()
 	if err == nil && uniCheckDirRW(dir) {
 		return
 	}
+	println(os.Getpid(), "UserConfigDir", err)
 
 	dir, err = os.UserHomeDir()
 	if err == nil && uniCheckDirRW(dir) {
 		return
 	}
+	println(os.Getpid(), "UserHomeDir", err)
 
 	dir = os.TempDir()
 	if !uniCheckDirRW(dir) {
@@ -125,7 +134,7 @@ func uniSetPidFile(flag string) {
 	}
 
 	uniPidFile = uniGetPidFile(flag)
-	fmt.Println("pid file:", uniPidFile)
+	println("pid file:", uniPidFile)
 }
 
 // 检查目录是否有读写权限

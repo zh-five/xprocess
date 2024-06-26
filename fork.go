@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"strconv"
@@ -22,8 +21,9 @@ type CmdOption func(*exec.Cmd)
 // 返回 cmd != nil 时为父进程, 否则为子进程
 // 无参数时,子进程的所有输出(stdout, stderr)默认会被抛弃
 func Fork(opts ...CmdOption) (cmd *exec.Cmd, err error) {
-	//判断子进程还是父进程
-	forkIdx++
+	defer func() {
+		forkIdx++
+	}()
 
 	//子进程, 退出
 	if IsForkPassing() {
@@ -35,6 +35,7 @@ func Fork(opts ...CmdOption) (cmd *exec.Cmd, err error) {
 		Args:   os.Args,
 		Stdout: io.Discard,
 		Stderr: io.Discard,
+		Env:    os.Environ(),
 	}
 
 	forkProcAttr(cmd) // 根据平台设置特别属性
@@ -44,16 +45,16 @@ func Fork(opts ...CmdOption) (cmd *exec.Cmd, err error) {
 	}
 
 	//设置子进程环境变量
-	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%d", ENV_NAME, forkIdx))
+	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%d", ENV_NAME, forkIdx+1))
 
 	//启动子进程
 	err = cmd.Start()
 	if err != nil {
-		log.Println(os.Getpid(), "启动子进程失败:", err)
+		println(os.Getpid(), "启动子进程失败:", err)
 		return
 	} else {
 		//执行成功
-		log.Println(os.Getpid(), ":", "启动子进程成功:", "->", cmd.Process.Pid, "\n ")
+		println(os.Getpid(), ":", "启动子进程成功:", "->", cmd.Process.Pid, "\n ")
 	}
 
 	return
@@ -65,18 +66,16 @@ func IsForkPassing() bool {
 	if err != nil {
 		envIdx = 0
 	}
-	if forkIdx <= envIdx { //子进程
-		return true
-	}
+	println(os.Getpid(), "forkIdx:", forkIdx, "envIdx:", envIdx)
 
-	return false
+	return forkIdx < envIdx
 }
 
 // fork 一个子进程, 子进程的输出(stdout,stderr)写入到日志文件
 func Fork2Log(logFile string) (cmd *exec.Cmd, err error) {
 	f, err := os.OpenFile(logFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
 	if err != nil {
-		log.Println(os.Getpid(), ": 打开日志文件错误:", err)
+		println(os.Getpid(), ": 打开日志文件错误:", err)
 		return
 	}
 
@@ -140,6 +139,7 @@ func loopFork(ctx context.Context, fork func() (*exec.Cmd, error)) bool {
 		}
 
 		// 等待子进程结束
+		println(os.Getpid(), "等待子进程结束")
 		ch := waitDone(cmd)
 
 		select {
