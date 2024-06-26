@@ -1,7 +1,6 @@
 package xprocess
 
 import (
-	"context"
 	"os"
 	"os/signal"
 	"syscall"
@@ -40,7 +39,7 @@ func (sf *Signal) SignalAllExit() *Signal {
 	return sf
 }
 
-// 监视事件, 事件由通道返回
+// 返回的通道可一直等待和读取出现的信号(限定为所监听的信号)
 func (sf *Signal) Notify() chan os.Signal {
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, sf.sigs...)
@@ -48,21 +47,15 @@ func (sf *Signal) Notify() chan os.Signal {
 	return ch
 }
 
-// 发生任何监视的事件时, cancel()
-func (sf *Signal) WithCancel(ctx context.Context) (context.Context, func()) {
-	ctx, cancel := context.WithCancel(ctx)
-
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, sf.sigs...)
+// 出现任何一个监听的信号, 将关闭返回的通道
+func (sf *Signal) Done() chan struct{} {
+	ch := make(chan struct{})
 	go func() {
-		select {
-		case <-ctx.Done():
-			signal.Stop(ch)
-		case <-ch:
-			cancel()
-			signal.Stop(ch)
-		}
+		chN := sf.Notify()
+		<-chN
+		signal.Stop(chN)
+		close(ch)
 	}()
 
-	return ctx, cancel
+	return ch
 }
