@@ -91,7 +91,7 @@ func uniSavePid() {
 }
 
 // 获取
-var UniGetPidFile = func(flag string) (pidFile string) {
+var uniGetPidFile = func(flag string) (pidFile string) {
 	dir, err := os.UserCacheDir()
 	defer func() {
 		name := fmt.Sprintf("xprocess_%s.pid", flag)
@@ -124,7 +124,7 @@ func uniSetPidFile(flag string) {
 		return
 	}
 
-	uniPidFile = UniGetPidFile(flag)
+	uniPidFile = uniGetPidFile(flag)
 	fmt.Println("pid file:", uniPidFile)
 }
 

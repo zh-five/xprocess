@@ -13,8 +13,8 @@ import (
 
 const ENV_NAME = "XW_DAEMON_IDX"
 
-// 运行时调用background的次数
-var runIdx int = 0
+// fork 计数, 序号
+var forkIdx int = 0
 
 type CmdOption func(*exec.Cmd)
 
@@ -23,12 +23,10 @@ type CmdOption func(*exec.Cmd)
 // 无参数时,子进程的所有输出(stdout, stderr)默认会被抛弃
 func Fork(opts ...CmdOption) (cmd *exec.Cmd, err error) {
 	//判断子进程还是父进程
-	runIdx++
-	envIdx, err := strconv.Atoi(os.Getenv(ENV_NAME))
-	if err != nil {
-		envIdx = 0
-	}
-	if runIdx <= envIdx { //子进程, 退出
+	forkIdx++
+
+	//子进程, 退出
+	if IsForkPassing() {
 		return nil, nil
 	}
 
@@ -46,7 +44,7 @@ func Fork(opts ...CmdOption) (cmd *exec.Cmd, err error) {
 	}
 
 	//设置子进程环境变量
-	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%d", ENV_NAME, runIdx))
+	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%d", ENV_NAME, forkIdx))
 
 	//启动子进程
 	err = cmd.Start()
@@ -59,6 +57,19 @@ func Fork(opts ...CmdOption) (cmd *exec.Cmd, err error) {
 	}
 
 	return
+}
+
+// 是否为fork时的路过
+func IsForkPassing() bool {
+	envIdx, err := strconv.Atoi(os.Getenv(ENV_NAME))
+	if err != nil {
+		envIdx = 0
+	}
+	if forkIdx <= envIdx { //子进程
+		return true
+	}
+
+	return false
 }
 
 // fork 一个子进程, 子进程的输出(stdout,stderr)写入到日志文件
@@ -89,46 +100,53 @@ func Fork2Std() (cmd *exec.Cmd, err error) {
 
 // fork子进程, 若退出总是再fork一个. 保证总有一个子进程在运行
 // 父进程会阻塞在本方法内部一直循环, 直到 ctx 取消
-// 子进程不阻塞,直接返回
-
-// ctx 取消后, 父进程会杀死正在运行的子进程, 并结束循环
 // 子进程的所有输出, 写入到日志文件
-func AlwaysFork2Log(ctx context.Context, logFile string) {
-	loopFork(ctx, func() (*exec.Cmd, error) {
+
+// 父进程阻塞, 直到 ctx 被取消时, kill 子进程,返回 true
+// 子进程不阻塞, 返回 false
+func AlwaysFork2Log(ctx context.Context, logFile string) bool {
+	return loopFork(ctx, func() (*exec.Cmd, error) {
 		return Fork2Log(logFile)
 	})
 }
 
-func AlwaysFork2Std(ctx context.Context) {
-	loopFork(ctx, func() (*exec.Cmd, error) {
+// 父进程阻塞, 直到 ctx 被取消时, kill 子进程,返回 true
+// 子进程不阻塞, 返回 false
+func AlwaysFork2Std(ctx context.Context) bool {
+	return loopFork(ctx, func() (*exec.Cmd, error) {
 		return Fork2Std()
 	})
 }
 
-func AlwaysFork(ctx context.Context) {
-	loopFork(ctx, func() (*exec.Cmd, error) {
+// 父进程阻塞, 直到 ctx 被取消时, kill 子进程,返回 true
+// 子进程不阻塞, 返回 false
+func AlwaysFork(ctx context.Context) bool {
+	return loopFork(ctx, func() (*exec.Cmd, error) {
 		return Fork()
 	})
 }
 
-func loopFork(ctx context.Context, fn func() (*exec.Cmd, error)) {
+// 父进程阻塞, 直到 ctx 被取消时, kill 子进程,返回 true
+// 子进程不阻塞, 返回 false
+func loopFork(ctx context.Context, fork func() (*exec.Cmd, error)) bool {
 	for {
-		cmd, err := fn()
+		cmd, err := fork()
 		if err != nil {
 			time.Sleep(time.Second)
 			continue
 		}
 		if cmd == nil { // 子进程
-			return
+			return false
 		}
 
+		// 等待子进程结束
 		ch := waitDone(cmd)
 
 		select {
 		case <-ctx.Done():
 			cmd.Process.Kill() // 杀掉子进程
-			return
-		case <-ch:
+			return true
+		case <-ch: // 子进程退出
 
 		}
 	}
