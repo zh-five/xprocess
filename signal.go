@@ -1,4 +1,4 @@
-package sig
+package xprocess
 
 import (
 	"context"

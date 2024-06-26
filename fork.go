@@ -1,4 +1,4 @@
-package fork
+package xprocess
 
 import (
 	"context"
@@ -33,12 +33,13 @@ func Fork(opts ...CmdOption) (cmd *exec.Cmd, err error) {
 	}
 
 	cmd = &exec.Cmd{
-		Path:        os.Args[0],
-		Args:        os.Args,
-		SysProcAttr: NewSysProcAttr(),
-		Stdout:      io.Discard,
-		Stderr:      io.Discard,
+		Path:   os.Args[0],
+		Args:   os.Args,
+		Stdout: io.Discard,
+		Stderr: io.Discard,
 	}
+
+	forkProcAttr(cmd) // 根据平台设置特别属性
 
 	for _, opt := range opts {
 		opt(cmd)

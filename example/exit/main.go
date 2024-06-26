@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/zh-five/xprocess/sig"
+	"github.com/zh-five/xprocess"
 )
 
 func main() {
-	ctx, _ := sig.NewSignal().SignalAllExit().WithCancel(context.Background())
+	ctx, _ := xprocess.NewSignal().SignalAllExit().WithCancel(context.Background())
 
 	go func() {
 		select {
