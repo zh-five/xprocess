@@ -13,4 +13,8 @@ func forkProcAttr(cmd *exec.Cmd) {
 		cmd.SysProcAttr = &syscall.SysProcAttr{}
 	}
 	cmd.SysProcAttr.HideWindow = true // 禁止出现命令行窗口
+
+	// 脱离主进程运行
+	const DETACHED_PROCESS = 0x00000008
+	cmd.SysProcAttr.CreationFlags = syscall.CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS
 }
