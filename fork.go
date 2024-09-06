@@ -38,7 +38,7 @@ func Fork(opts ...CmdOption) (cmd *exec.Cmd, err error) {
 		Env:    os.Environ(),
 	}
 
-	forkProcAttr(cmd) // 根据平台设置特别属性
+	CmdProcAttr(cmd) // 根据平台设置特别属性
 
 	for _, opt := range opts {
 		opt(cmd)

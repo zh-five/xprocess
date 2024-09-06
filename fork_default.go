@@ -8,7 +8,7 @@ import (
 	"syscall"
 )
 
-func forkProcAttr(cmd *exec.Cmd) {
+func CmdProcAttr(cmd *exec.Cmd) {
 	if cmd.SysProcAttr == nil {
 		cmd.SysProcAttr = &syscall.SysProcAttr{}
 	}
